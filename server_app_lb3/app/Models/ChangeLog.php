@@ -55,4 +55,34 @@ class ChangeLog extends Model
             'created_by' => auth()->id(),
         ]);
     }
+    public static function restoreEntity(int $changeLogId): bool
+    {
+        // Получаем запись из журнала изменений
+        $changeLog = static::find($changeLogId);
+
+        if (!$changeLog) {
+            return false; // Запись не найдена
+        }
+
+        // Получаем класс сущности и идентификатор
+        $entityClass = $changeLog->entity_name;
+        $entityId = $changeLog->entity_id;
+
+        // Находим сущность
+        $entity = $entityClass::find($entityId);
+
+        if (!$entity) {
+            return false; // Сущность не найдена
+        }
+
+        // Восстанавливаем старые значения
+        $oldValues = json_decode($changeLog->old_values, true);
+        foreach ($oldValues as $field => $value) {
+            $entity->$field = $value; // Восстанавливаем старое значение
+        }
+        $changeLog->delete();
+        // Сохраняем изменения
+        return $entity->save();
+    }
 }
+
