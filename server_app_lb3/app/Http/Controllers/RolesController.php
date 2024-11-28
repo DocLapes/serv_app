@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use DB;
 use App\Models\Role;
+use App\Models\ChangeLog;
 use App\DTO\Roles\RoleDTO;
 use Illuminate\Http\Response;
 use App\DTO\Roles\RoleListDTO;
@@ -46,8 +48,12 @@ class RolesController
         $data = $request->validated();
 
         $role = Role::findOrFail($roleId);
+
+        DB::beginTransaction();
         $role->fill($data);
+        ChangeLog::log_entity_changes($role);
         $role->save();
+        DB::commit();
 
         return new JsonResponse(RoleDTO::fromOrm($role));
     }
@@ -112,5 +118,16 @@ class RolesController
             ['permission_id', '=', $permissionId]
         ])->firstOrFail();
         $role_permission->restore();
+    }
+
+    /**
+     * Returns role's change logs
+     */
+    function getRoleChangeLogs(mixed $roleId)
+    {
+        return ChangeLog::where([
+            ['entity_name', '=', Role::class],
+            ['entity_id', '=', $roleId]
+        ])->get();
     }
 }

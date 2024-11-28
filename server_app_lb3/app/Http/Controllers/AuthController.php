@@ -7,6 +7,7 @@ use App\Models\Role;
 use App\Models\User;
 use App\Models\UserRole;
 use App\DTO\Auth\UserDTO;
+use App\Models\ChangeLog;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Hash;
@@ -39,7 +40,6 @@ class AuthController
         DB::commit();
 
         return ['token' => $token->plainTextToken];
-        
     }
 
     /**
@@ -62,7 +62,6 @@ class AuthController
         DB::commit();
 
         return new JsonResponse(['token' => $token->plainTextToken], Response::HTTP_CREATED);
-        
     }
 
     /**
@@ -77,8 +76,11 @@ class AuthController
         if (! Hash::check($data['old_password'], $user->password))
             return new JsonResponse(['message' => "Указан неверный старый пароль"], Response::HTTP_BAD_REQUEST);
 
+        DB::beginTransaction();
         $user->password = Hash::make($data['new_password']);
+        ChangeLog::log_entity_changes($user);
         $user->save();
+        DB::commit();
     }
 
     /**

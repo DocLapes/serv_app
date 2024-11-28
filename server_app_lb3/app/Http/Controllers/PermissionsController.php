@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use DB;
+use App\Models\ChangeLog;
 use App\Models\Permission;
 use Illuminate\Http\JsonResponse;
 use App\DTO\Permissions\PermissionDTO;
@@ -34,9 +36,15 @@ class PermissionsController
     function updatePermission(UpdateRequest $request, mixed $permissionId)
     {
         $data = $request->validated();
+
         $permission = Permission::findOrFail($permissionId);
+
+        DB::beginTransaction();
         $permission->fill($data);
+        ChangeLog::log_entity_changes($permission);
         $permission->save();
+        DB::commit();
+
         return new JsonResponse(PermissionDTO::fromOrm($permission));
     }
 
@@ -55,5 +63,16 @@ class PermissionsController
     function restoreSoftDeletedPermission(mixed $permissionId)
     {
         Permission::withTrashed()->find($permissionId)->restore();
+    }
+
+    /**
+     * Returns permission's change logs
+     */
+    function getPermissionChangeLogs(mixed $permissionId)
+    {
+        return ChangeLog::where([
+            ['entity_name', '=', Permission::class],
+            ['entity_id', '=', $permissionId]
+        ])->get();
     }
 }
