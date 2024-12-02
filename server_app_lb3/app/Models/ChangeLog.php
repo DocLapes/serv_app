@@ -76,13 +76,35 @@ class ChangeLog extends Model
         }
 
         // Восстанавливаем старые значения
+        
         $oldValues = json_decode($changeLog->old_values, true);
+
+        $newValues1 = [];
+        foreach ($oldValues as $field => $value) {
+            $newValues1[$field] = $entity->$field; // Текущие значения сущности
+        }
+
         foreach ($oldValues as $field => $value) {
             $entity->$field = $value; // Восстанавливаем старое значение
         }
-        $changeLog->delete();
         // Сохраняем изменения
-        return $entity->save();
+        $entity->save();
+
+        $newValues = [];
+        foreach ($oldValues as $field => $value) {
+            $newValues[$field] = $entity->$field; // Текущие значения сущности
+        }
+
+        static::insert([
+            'entity_name' => $entityClass,
+            'entity_id' => $entityId,
+            'old_values' => json_encode($newValues1), // Текущие значения (старые значения)
+            'new_values' => json_encode($newValues), // Старые значения (новые после восстановления)
+            'created_by' => auth()->id(),
+        ]);
+
+        return true;
+    
     }
 }
 
