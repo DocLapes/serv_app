@@ -15,7 +15,7 @@ return new class extends Migration
             $table->comment('Логи запросов пользователей');
 
             $table->id();
-            $table->string('url')->comment('URL HTTP-запроса');
+            $table->text('url')->comment('URL HTTP-запроса');
             $table->string('http_method')->comment('Метод HTTP-запроса');
             $table->string('controller')->comment('Контроллер, обработавший HTTP-запрос');
             $table->string('controller_method')->comment('Метод контроллера, обрабатывающего HTTP-запрос');
