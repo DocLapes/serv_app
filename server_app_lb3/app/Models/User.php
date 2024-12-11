@@ -33,11 +33,12 @@ class User extends Authenticatable
      * @var array<int, string>
      */
     protected $hidden = [
-        'password',
+        'id',
         'remember_token',
         'created_at',
-        'email_verified_at',
-        'updated_at'
+        'updated_at',
+        'password',
+        'email_verified_at'
     ];
 
     /**
@@ -59,6 +60,11 @@ class User extends Authenticatable
     public function roles() : BelongsToMany
     {
         return $this->belongsToMany(Role::class, 'user_roles');
+    }
+
+    public function hasRole(string $roleName) : bool
+    {
+        return $this->roles()->where('name', $roleName)->exists();
     }
 
     public function hasPermission(string $permissionName) : bool
