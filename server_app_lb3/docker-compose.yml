@@ -27,14 +27,17 @@ services:
             retries: 3
 
     redis:
-        image: redis:7.4.0-alpine3.20
-        volumes:
-            # To save redis data in persistent docker volume
-            - redis-data:/data
-        env_file:
-            - .env
+        image: 'bitnami/redis:7.4.1'
+        # volumes:
+            # # To save redis data in persistent docker volume
+            # - redis-data:/bitnami/redis/data
+        environment:
+            - REDIS_PASSWORD=${REDIS_PASSWORD}
+        ports:
+            - ${REDIS_PORT}:6379
         networks:
             - app
+        command: /opt/bitnami/scripts/redis/run.sh
         healthcheck:
             test: ["CMD", "redis-cli", 'ping']
             retries: 3
@@ -63,6 +66,7 @@ services:
             context: .
             dockerfile: .docker/php/Dockerfile
         volumes:
+            # - .:/var/www/html
             # To share public data (css, js, images) between nginx and php
             - public:/var/www/html/public
             - public2:/var/www/html/storage/app/public
@@ -71,35 +75,37 @@ services:
         networks:
             - app
 
-        develop:
-            watch:
-                - action: rebuild
-                  path: ./app
-                  target: /var/www/html/app
-                - action: rebuild
-                  path: ./bootstrap
-                  target: /var/www/html/bootstrap
-                - action: rebuild
-                  path: ./config
-                  target: /var/www/html/config
-                - action: rebuild
-                  path: ./database
-                  target: /var/www/html/database
-                - action: rebuild
-                  path: ./lang
-                  target: /var/www/html/lang
-                - action: rebuild
-                  path: ./public
-                  target: /var/www/html/public
-                - action: rebuild
-                  path: ./resources
-                  target: /var/www/html/resources
-                - action: rebuild
-                  path: ./routes
-                  target: /var/www/html/routes
-                - action: rebuild
-                  path: ./.env
-                  target: /var/www/html/.env
+    laravel-queue: # очередь фоновых задач
+        image: php_img
+        depends_on:
+          - php
+          - postgres
+          - redis
+        restart: "no"
+        entrypoint: ["php", "artisan", "queue:work"]
+        networks:
+            - app
+
+    laravel-schedule: # планировщик, добавляющий в очередь фоновые задачи
+        image: php_img
+        depends_on:
+          - laravel-queue
+        restart: "no"
+        entrypoint: ["php", "artisan", "schedule:work"]
+        networks:
+            - app
+
+    mailpit:
+        image: axllent/mailpit
+        container_name: mailpit
+        ports:
+            - 8025:8025
+            - 1025:1025
+        environment:
+            MP_SMTP_AUTH_ACCEPT_ANY: 1
+            MP_SMTP_AUTH_ALLOW_INSECURE: 1
+        networks:
+            - app
 
 networks:
     app:
